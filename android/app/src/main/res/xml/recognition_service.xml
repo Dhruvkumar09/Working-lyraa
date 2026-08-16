@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Required metadata for any RecognitionService. Lyraa declares one because the
+  assistant role will not be offered without it; the service itself returns an
+  error rather than transcribing, since speech goes to the Live session as audio.
+-->
+<recognition-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="com.lyraa.assistant.MainActivity" />

@@ -1,0 +1,24 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+.env
+.env.*
+tsconfig.tsbuildinfo
+
+# Android build outputs
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+android/capacitor-cordova-android-plugins/
+*.keystore
+*.jks
+*.apk
+*.aab
+
+# The one exception: the release key has to reach CI, or the workflow signs
+# nothing and the APK comes out with Android's public debug key again. Set the
+# LYRAA_KEYSTORE_BASE64 secret to override it with a key kept out of the repo.
+!android/lyraa-release.jks

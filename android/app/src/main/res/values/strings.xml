@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Lyraa</string>
+    <string name="title_activity_main">Lyraa</string>
+    <string name="package_name">com.lyraa.assistant</string>
+    <string name="custom_url_scheme">com.lyraa.assistant</string>
+    <string name="accessibility_service_description">Lets Lyraa tap, swipe, scroll and type on Dhruv\'s behalf, and read what is on screen so she can describe it. She never reads password fields.</string>
+    <string name="assistant_service_label">Lyraa</string>
+</resources>

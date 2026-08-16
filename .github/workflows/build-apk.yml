@@ -1,0 +1,96 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and test
+        run: |
+          npx tsc --noEmit
+          npx vitest run
+
+      - name: Build web bundle
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Prefer a release key held in secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.LYRAA_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.LYRAA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.LYRAA_KEY_ALIAS }}
+        run: |
+          # Optional. With no secret set, the key committed alongside the app is
+          # used, which is what makes a plain clone build an installable APK.
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "No keystore secret set; using the in-repo release key."
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/lyraa.jks"
+          {
+            echo "LYRAA_KEYSTORE_PATH=$RUNNER_TEMP/lyraa.jks"
+            echo "LYRAA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "LYRAA_KEY_ALIAS=${KEY_ALIAS:-lyraa}"
+          } >> "$GITHUB_ENV"
+
+      - name: Assemble signed release APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Refuse a debuggable or debug-signed APK
+        run: |
+          # The two things that make a phone call a sideloaded build unsafe. If
+          # either is ever true again, the build should fail rather than ship.
+          set -euo pipefail
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort | tail -1)
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt2 | sort | tail -1)
+
+          "$apksigner" verify --print-certs "$apk" | tee certs.txt
+          if grep -q 'CN=Android Debug' certs.txt; then
+            echo "::error::APK is signed with the public Android debug key."
+            exit 1
+          fi
+          if "$aapt" dump badging "$apk" | grep -q 'application-debuggable'; then
+            echo "::error::APK is marked debuggable."
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lyraa-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Attach APK to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/app-release.apk

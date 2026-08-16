@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Declares Lyraa as a candidate for the system "Digital assistant app" role.
+  Android only offers the role to apps that ship a VoiceInteractionService with
+  both a session service and a recognition service declared here.
+-->
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="com.lyraa.assistant.LyraaVoiceSessionService"
+    android:recognitionService="com.lyraa.assistant.LyraaRecognitionService"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="false" />

@@ -1,0 +1,76 @@
+apply plugin: 'com.android.application'
+
+// Android's debug key is public and every debug APK is marked debuggable, which
+// is what makes a phone treat a sideloaded build as unsafe. A key that stays the
+// same across builds also means each new APK installs over the last one instead
+// of being refused for a signature mismatch.
+// CI can point all four values somewhere else through the environment.
+def releaseStore = System.getenv('LYRAA_KEYSTORE_PATH') ?: '../lyraa-release.jks'
+def releaseStorePassword = System.getenv('LYRAA_KEYSTORE_PASSWORD') ?: 'LyraaByDhruv2026'
+def releaseAlias = System.getenv('LYRAA_KEY_ALIAS') ?: 'lyraa'
+def releaseKeyPassword = System.getenv('LYRAA_KEY_PASSWORD') ?: releaseStorePassword
+
+android {
+    namespace = "com.lyraa.assistant"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.lyraa.assistant"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            storeFile file(releaseStore)
+            storePassword releaseStorePassword
+            keyAlias releaseAlias
+            keyPassword releaseKeyPassword
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            debuggable false
+            // Left off on purpose: Capacitor resolves plugin methods by name at
+            // runtime, so shrinking would need a keep rule for every one of them.
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
